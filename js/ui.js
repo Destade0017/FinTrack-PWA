@@ -11,38 +11,29 @@ export const ui = {
   
   updateDashboardSummary() {
     const balance = store.getBalance();
-    const transactions = store.data.transactions;
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    // Filter transactions for the current month
-    const monthlyTransactions = transactions.filter(t => {
-      const d = new Date(t.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-
-    const monthlyIncome = monthlyTransactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-    
-    const monthlyExpenses = monthlyTransactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
+    const currentKey = FinEngine.getCurrentMonthKey();
+    const summary = FinEngine.getMonthlySummary(store.data.transactions, currentKey);
     const budget = store.data.budgetLimit;
 
     // Update Hero Balance (Total)
     document.getElementById('sum-balance').textContent = currFormatter.format(balance);
     
     // Update Monthly Summaries
-    document.getElementById('sum-income').textContent = currFormatter.format(monthlyIncome);
-    document.getElementById('sum-expenses').textContent = currFormatter.format(monthlyExpenses);
+    document.getElementById('sum-income').textContent = currFormatter.format(summary.income);
+    document.getElementById('sum-expenses').textContent = currFormatter.format(summary.expenses);
     
-    // Update Status Indicator
-    this.updateStatusIndicator(monthlyExpenses, budget);
+    // Calculate Remaining Budget per Day
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysRemaining = daysInMonth - now.getDate() + 1;
+    const budgetRemaining = budget - summary.expenses;
+    const dailyRemaining = budgetRemaining > 0 ? (budgetRemaining / daysRemaining) : 0;
+
+    // Update Status Indicator with extra detail
+    this.updateStatusIndicator(summary.expenses, budget, dailyRemaining);
   },
 
-  updateStatusIndicator(spent, budget) {
+  updateStatusIndicator(spent, budget, dailyRemaining) {
     const statusEl = document.getElementById('status-indicator');
     if (!statusEl) return;
 
@@ -55,17 +46,26 @@ export const ui = {
       statusClass = 'overspending';
       statusText = 'Financial Status: Overspending';
       icon = 'ph-warning';
-    } else if (ratio >= 0.8) {
+    } else if (ratio >= 0.9) {
+      statusClass = 'overspending';
+      statusText = 'Financial Status: Critical';
+      icon = 'ph-warning';
+    } else if (ratio >= 0.75) {
       statusClass = 'warning';
       statusText = 'Financial Status: Warning';
       icon = 'ph-warning-circle';
     }
 
+    // Add daily remaining info to the status text
+    const dailyText = dailyRemaining > 0 
+      ? ` • ${currFormatter.format(dailyRemaining)}/day left` 
+      : '';
+
     statusEl.className = `status-badge ${statusClass}`;
-    statusEl.querySelector('span').textContent = statusText;
+    statusEl.querySelector('span').textContent = statusText + dailyText;
     statusEl.querySelector('i').className = `ph-fill ${icon}`;
     
-    // Auto-show budget alert banner if overspending
+    // Auto-show budget alert banner if overspending or critical
     if (ratio >= 0.9) {
       this.showBudgetAlert((ratio * 100));
     } else {
@@ -87,9 +87,23 @@ export const ui = {
   },
 
   renderInsights() {
-    // Hidden as per simplification rules, but kept for logic if needed
+    const insights = FinEngine.generateSmartInsights(store.data.transactions, store.data.budgetLimit);
     const container = document.getElementById('insights-container');
-    if (container) container.innerHTML = '';
+    
+    // If container doesn't exist on this view, we skip (it was removed from dashboard in previous UI pass)
+    if (!container) return;
+    
+    if (insights.length === 0) {
+      container.innerHTML = '<div class="text-muted text-sm px-4">No specific insights yet. Add more data!</div>';
+      return;
+    }
+
+    container.innerHTML = insights.map(ins => `
+      <div class="insight-item">
+        <i class="ph ${ins.icon} insight-icon ${ins.style}"></i>
+        <div class="insight-text">${ins.text}</div>
+      </div>
+    `).join('');
   },
 
   renderRecentTransactions() {
@@ -184,10 +198,17 @@ export const ui = {
 
     goalsList.innerHTML = goals.map(g => {
       const percentage = Math.min(100, (g.current / g.target) * 100);
+      const remaining = Math.max(0, g.target - g.current);
+      
       return `
         <div class="goal-card">
           <div class="goal-header">
-            <span class="goal-title">${g.name}</span>
+            <div class="goal-info">
+              <span class="goal-title">${g.name}</span>
+              <div class="badge ${g.status === 'Completed' ? 'badge-income' : 'badge-expense'}" style="font-size: 10px; margin-left: 8px;">
+                ${g.status}
+              </div>
+            </div>
             <button class="btn btn-primary btn-icon btn-fund-goal" data-id="${g.id}" data-name="${g.name}" aria-label="Add Funds">
               <i class="ph ph-plus"></i>
             </button>
@@ -199,7 +220,10 @@ export const ui = {
           <div class="goal-progress-wrap">
             <div class="goal-progress-fill" style="width: ${percentage}%"></div>
           </div>
-          <div class="text-right text-xs text-muted">${percentage.toFixed(0)}% Completed</div>
+          <div class="flex justify-between align-center mt-1">
+             <span class="text-xs text-muted">${currFormatter.format(remaining)} more needed</span>
+             <span class="text-xs font-semibold text-primary">${percentage.toFixed(0)}%</span>
+          </div>
         </div>
       `;
     }).join('');
