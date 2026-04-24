@@ -112,99 +112,37 @@
         <!-- DASHBOARD VIEW -->
         <section id="view-dashboard" class="view active-view">
           
-          <!-- Smart Insights Panel -->
-          <div class="insights-panel mb-6" id="insights-container">
-            <!-- JS will populate smart insights here -->
+          <!-- Hero Balance Section -->
+          <div class="hero-balance-card mb-8">
+            <div class="balance-label text-muted">Total Balance</div>
+            <div class="balance-amount" id="sum-balance">$0.00</div>
+            <div id="status-indicator" class="status-badge on-track">
+              <i class="ph-fill ph-check-circle"></i>
+              <span>Financial Status: On Track</span>
+            </div>
           </div>
 
-          <!-- Summary Cards -->
-          <div class="summary-grid">
-            
-            <div class="summary-card card blend pointer">
-              <div class="card-header">
-                <span class="card-title">Total Balance</span>
-                <div class="icon-wrap bg-primary-soft">
-                  <i class="ph ph-wallet-fill text-primary"></i>
-                </div>
-              </div>
-              <div class="card-amount" id="sum-balance">$0.00</div>
-              <div class="card-footer">
-                <span class="trend neutral">Updated just now</span>
-              </div>
+          <!-- Monthly Summary Row -->
+          <div class="summary-row mb-8">
+            <div class="summary-item card blend">
+              <div class="summary-label text-muted">Monthly Income</div>
+              <div class="summary-value text-success" id="sum-income">$0.00</div>
             </div>
-
-            <div class="summary-card card blend pointer">
-              <div class="card-header">
-                <span class="card-title">Total Income</span>
-                <div class="icon-wrap bg-success-soft">
-                  <i class="ph ph-trend-up text-success"></i>
-                </div>
-              </div>
-              <div class="card-amount" id="sum-income">$0.00</div>
-              <div class="card-footer">
-                <span class="trend positive" id="income-count">0 transactions</span>
-              </div>
+            <div class="summary-item card blend">
+              <div class="summary-label text-muted">Monthly Expenses</div>
+              <div class="summary-value text-danger" id="sum-expenses">$0.00</div>
             </div>
-
-            <div class="summary-card card blend pointer">
-              <div class="card-header">
-                <span class="card-title">Total Expenses</span>
-                <div class="icon-wrap bg-danger-soft">
-                  <i class="ph ph-trend-down text-danger"></i>
-                </div>
-              </div>
-              <div class="card-amount" id="sum-expenses">$0.00</div>
-              <div class="card-footer">
-                <span class="trend negative" id="expense-count">0 transactions</span>
-              </div>
-            </div>
-
-            <div class="summary-card card blend pointer">
-              <div class="card-header">
-                <span class="card-title">Monthly Budget</span>
-                <button class="btn-edit-budget" id="btn-edit-budget" aria-label="Edit Budget">
-                  <i class="ph ph-pencil-simple text-muted"></i>
-                </button>
-              </div>
-              <div class="card-amount" id="sum-budget-remaining">$1,000.00</div>
-              <div class="budget-progress-container mt-3">
-                <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" id="budget-progress" style="width: 0%"></div>
-                </div>
-                <div class="progress-labels mt-2">
-                  <span class="text-xs text-muted">Spent: <span id="budget-spent-text">$0</span></span>
-                  <span class="text-xs text-muted">Limit: <span id="budget-limit-text">$1,000</span></span>
-                </div>
-              </div>
-            </div>
-
           </div>
 
-          <!-- Main Dashboard Split: Recent Transactions + Quick Chart -->
-          <div class="dashboard-split mt-6">
-            
-            <!-- Recent Transactions -->
-            <div class="card blend recent-transactions">
-              <div class="card-header mb-4 flex justify-between align-center">
-                <h3 class="card-heading">Recent Transactions</h3>
-                <a href="#" class="view-all-link" id="link-view-all">View All</a>
-              </div>
-              <div class="transaction-feed" id="recent-transactions-list">
-                <!-- JS will populate flex cards here -->
-              </div>
+          <!-- Recent Transactions (Simplified for Dashboard) -->
+          <div class="card blend recent-transactions">
+            <div class="card-header mb-4 flex justify-between align-center">
+              <h3 class="card-heading">Recent Transactions</h3>
+              <a href="#" class="view-all-link" id="link-view-all">View All</a>
             </div>
-
-            <!-- Mini Analytics -->
-            <div class="card blend mini-analytics">
-              <h3 class="card-heading mb-4">Expense Breakdown</h3>
-              <div class="chart-container-mini">
-                <canvas id="mini-category-chart"></canvas>
-              </div>
-              <div id="mini-chart-empty" class="empty-state text-center text-muted hidden py-8">
-                No expense data to analyze yet.
-              </div>
+            <div class="transaction-feed" id="recent-transactions-list">
+              <!-- JS will populate flex cards here -->
             </div>
-
           </div>
 
         </section>
@@ -246,9 +184,9 @@
         <section id="view-analytics" class="view">
           <div class="analytics-grid">
             
-            <div class="card blend col-span-2">
+            <div class="card blend">
               <div class="card-header mb-4">
-                <h3 class="card-heading">Income vs Expenses</h3>
+                <h3 class="card-heading">Monthly Balance Trend</h3>
               </div>
               <div class="chart-container-large">
                 <canvas id="income-expense-chart"></canvas>
@@ -257,10 +195,13 @@
 
             <div class="card blend">
               <div class="card-header mb-4">
-                <h3 class="card-heading">Spending by Category</h3>
+                <h3 class="card-heading">Expense Breakdown</h3>
               </div>
               <div class="chart-container-large">
-                <canvas id="main-category-chart"></canvas>
+                <canvas id="mini-category-chart"></canvas>
+              </div>
+              <div id="mini-chart-empty" class="empty-state text-center text-muted hidden py-8">
+                No expense data to analyze yet.
               </div>
             </div>
 

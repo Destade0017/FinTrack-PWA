@@ -11,67 +11,97 @@ export const ui = {
   
   updateDashboardSummary() {
     const balance = store.getBalance();
-    const income = store.getIncome();
-    const expenses = store.getExpenses();
+    const transactions = store.data.transactions;
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Filter transactions for the current month
+    const monthlyTransactions = transactions.filter(t => {
+      const d = new Date(t.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    const monthlyIncome = monthlyTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const monthlyExpenses = monthlyTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
     const budget = store.data.budgetLimit;
 
+    // Update Hero Balance (Total)
     document.getElementById('sum-balance').textContent = currFormatter.format(balance);
-    document.getElementById('sum-income').textContent = currFormatter.format(income);
-    document.getElementById('sum-expenses').textContent = currFormatter.format(expenses);
     
-    // Budget Progress
-    const remaining = budget - expenses;
-    document.getElementById('sum-budget-remaining').textContent = currFormatter.format(Math.max(0, remaining));
-    document.getElementById('budget-spent-text').textContent = currFormatter.format(expenses);
-    document.getElementById('budget-limit-text').textContent = currFormatter.format(budget);
+    // Update Monthly Summaries
+    document.getElementById('sum-income').textContent = currFormatter.format(monthlyIncome);
+    document.getElementById('sum-expenses').textContent = currFormatter.format(monthlyExpenses);
+    
+    // Update Status Indicator
+    this.updateStatusIndicator(monthlyExpenses, budget);
+  },
 
-    const progressPercentage = Math.min(100, (expenses / budget) * 100);
-    const progressBar = document.getElementById('budget-progress');
-    progressBar.style.width = `${progressPercentage}%`;
+  updateStatusIndicator(spent, budget) {
+    const statusEl = document.getElementById('status-indicator');
+    if (!statusEl) return;
+
+    const ratio = spent / budget;
+    let statusClass = 'on-track';
+    let statusText = 'Financial Status: On Track';
+    let icon = 'ph-check-circle';
+
+    if (ratio >= 1.0) {
+      statusClass = 'overspending';
+      statusText = 'Financial Status: Overspending';
+      icon = 'ph-warning';
+    } else if (ratio >= 0.8) {
+      statusClass = 'warning';
+      statusText = 'Financial Status: Warning';
+      icon = 'ph-warning-circle';
+    }
+
+    statusEl.className = `status-badge ${statusClass}`;
+    statusEl.querySelector('span').textContent = statusText;
+    statusEl.querySelector('i').className = `ph-fill ${icon}`;
     
-    if (progressPercentage >= 90) {
-      progressBar.classList.add('warning');
-      this.showBudgetAlert(progressPercentage);
+    // Auto-show budget alert banner if overspending
+    if (ratio >= 0.9) {
+      this.showBudgetAlert((ratio * 100));
     } else {
-      progressBar.classList.remove('warning');
       this.hideBudgetAlert();
     }
   },
 
   showBudgetAlert(percentage) {
     const alertEl = document.getElementById('budget-alert');
-    if (alertEl.classList.contains('hidden')) {
+    if (alertEl && alertEl.classList.contains('hidden')) {
       alertEl.querySelector('.alert-text strong').nextSibling.textContent = ` You have spent ${percentage.toFixed(0)}% of your monthly budget!`;
       alertEl.classList.remove('hidden');
     }
   },
 
   hideBudgetAlert() {
-    document.getElementById('budget-alert').classList.add('hidden');
+    const alertEl = document.getElementById('budget-alert');
+    if (alertEl) alertEl.classList.add('hidden');
   },
 
   renderInsights() {
-    const insights = store.generateInsights();
+    // Hidden as per simplification rules, but kept for logic if needed
     const container = document.getElementById('insights-container');
-    
-    container.innerHTML = insights.map(ins => `
-      <div class="insight-item">
-        <i class="ph ${ins.icon} insight-icon ${ins.style}"></i>
-        <div class="insight-text">${ins.text}</div>
-      </div>
-    `).join('');
+    if (container) container.innerHTML = '';
   },
 
   renderRecentTransactions() {
-    const tbody = document.getElementById('recent-transactions-list');
+    const container = document.getElementById('recent-transactions-list');
     const recentTx = store.getRecentTransactions(5);
     
     if (recentTx.length === 0) {
-      tbody.innerHTML = `<div class="empty-state text-center text-muted py-8">No transactions yet.</div>`;
+      container.innerHTML = `<div class="empty-state text-center text-muted py-8">No transactions yet.</div>`;
       return;
     }
 
-    tbody.innerHTML = recentTx.map(tx => this.createTransactionRow(tx)).join('');
+    container.innerHTML = recentTx.map(tx => this.createTransactionRow(tx)).join('');
   },
 
   renderFullTransactionsList() {
@@ -80,38 +110,41 @@ export const ui = {
     const category = document.getElementById('filter-category').value;
 
     const filtered = store.getFilteredTransactions(search, type, category);
-    const tbody = document.getElementById('full-transactions-list');
+    const container = document.getElementById('full-transactions-list');
     
-    document.getElementById('transaction-count-text').textContent = `Showing ${filtered.length} transactions`;
+    const countText = document.getElementById('transaction-count-text');
+    if (countText) countText.textContent = `Showing ${filtered.length} transactions`;
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<div class="empty-state text-center text-muted py-8">No matching transactions found.</div>`;
+      container.innerHTML = `<div class="empty-state text-center text-muted py-8">No matching transactions found.</div>`;
       return;
     }
 
-    tbody.innerHTML = filtered.map(tx => this.createTransactionRow(tx)).join('');
+    container.innerHTML = filtered.map(tx => this.createTransactionRow(tx)).join('');
   },
 
   createTransactionRow(tx) {
     const isIncome = tx.type === 'income';
-    const amountClass = isIncome ? 'text-success' : 'text-danger';
-    const sign = isIncome ? '+' : '-';
-    const iconClass = isIncome ? 'ph-arrow-up' : 'ph-arrow-down';
+    const sign = isIncome ? '+' : '';
+    const typeClass = isIncome ? 'tx-income' : 'tx-expense';
+    const amountClass = isIncome ? 'income' : 'expense';
+    const iconClass = isIncome ? 'ph-trend-up' : 'ph-trend-down';
     
     return `
-      <div class="tx-card blend pointer">
+      <div class="tx-card ${typeClass}">
         <div class="tx-card-icon ${isIncome ? 'bg-success-soft text-success' : 'bg-danger-soft text-danger'}">
           <i class="ph ${iconClass}"></i>
         </div>
-        <div class="tx-card-details flex-1">
-          <div class="tx-title font-medium">${tx.note || tx.category}</div>
-          <div class="tx-meta text-muted text-xs">
-            <span class="badge ${isIncome ? 'badge-income' : 'badge-expense'}">${tx.category}</span>
-            <span class="tx-date ml-2">${dateFormatter.format(new Date(tx.date))}</span>
+        <div class="tx-card-details">
+          <div class="tx-title">${tx.note || tx.category}</div>
+          <div class="tx-meta">
+            <span class="tx-category">${tx.category}</span>
+            <span class="tx-dot mx-1">•</span>
+            <span class="tx-date">${dateFormatter.format(new Date(tx.date))}</span>
           </div>
         </div>
-        <div class="tx-card-amount text-right">
-          <div class="font-semibold ${amountClass}">${sign}${currFormatter.format(tx.amount)}</div>
+        <div class="tx-card-amount">
+          <div class="tx-amount ${amountClass}">${sign}${currFormatter.format(tx.amount)}</div>
           <button class="action-btn delete" data-id="${tx.id}" aria-label="Delete">
             <i class="ph ph-trash"></i>
           </button>

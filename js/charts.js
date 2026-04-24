@@ -6,18 +6,17 @@ import { store } from './store.js';
 Chart.defaults.color = '#9ca3af';
 Chart.defaults.font.family = "'Inter', sans-serif";
 
-let miniCategoryChartInstance = null;
-let mainCategoryChartInstance = null;
-let incomeExpenseChartInstance = null;
+let categoryChartInstance = null;
+let balanceTrendChartInstance = null;
 
 const chartColors = [
-  '#3b82f6', // primary blue
-  '#8b5cf6', // purple
+  '#4f46e5', // primary indigo
   '#10b981', // green
-  '#f59e0b', // warning orange
+  '#f59e0b', // warning
   '#ef4444', // red
+  '#3b82f6', // blue
+  '#8b5cf6', // purple
   '#06b6d4', // cyan
-  '#ec4899', // pink
 ];
 
 export function initCharts() {
@@ -25,120 +24,113 @@ export function initCharts() {
 }
 
 export function updateCharts() {
-  renderCategoryCharts();
-  renderIncomeExpenseChart();
+  renderCategoryChart();
+  renderBalanceTrendChart();
 }
 
-function renderCategoryCharts() {
+function renderCategoryChart() {
   const expenseData = store.getTransactionsByCategory('expense');
   const labels = Object.keys(expenseData);
   const data = Object.values(expenseData);
 
-  const emptyStateMini = document.getElementById('mini-chart-empty');
-  const miniCanvas = document.getElementById('mini-category-chart');
+  const emptyState = document.getElementById('mini-chart-empty');
+  const canvas = document.getElementById('mini-category-chart');
+  if (!canvas) return;
   
   if (labels.length === 0) {
-    emptyStateMini.classList.remove('hidden');
-    miniCanvas.classList.add('hidden');
+    if (emptyState) emptyState.classList.remove('hidden');
+    canvas.classList.add('hidden');
   } else {
-    emptyStateMini.classList.add('hidden');
-    miniCanvas.classList.remove('hidden');
+    if (emptyState) emptyState.classList.add('hidden');
+    canvas.classList.remove('hidden');
   }
 
-  const config = {
-    type: 'doughnut',
+  if (categoryChartInstance) categoryChartInstance.destroy();
+
+  if (labels.length > 0) {
+    categoryChartInstance = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: chartColors,
+          borderWidth: 0,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { 
+              boxWidth: 8,
+              padding: 20,
+              font: { size: 11 }
+            }
+          }
+        },
+        cutout: '75%'
+      }
+    });
+  }
+}
+
+function renderBalanceTrendChart() {
+  const canvas = document.getElementById('income-expense-chart');
+  if (!canvas) return;
+
+  const monthlyData = store.getMonthlyData();
+  
+  // Calculate Balance Trend (Cumulative)
+  let cumulative = 0;
+  const balanceTrend = monthlyData.income.map((inc, i) => {
+    cumulative += (inc - monthlyData.expenses[i]);
+    return cumulative;
+  });
+
+  const labelsFormated = monthlyData.labels.map(l => {
+    const [yr, mo] = l.split('-');
+    const date = new Date(yr, parseInt(mo)-1);
+    return date.toLocaleDateString('default', { month: 'short' });
+  });
+
+  if (balanceTrendChartInstance) {
+    balanceTrendChartInstance.destroy();
+  }
+
+  balanceTrendChartInstance = new Chart(canvas, {
+    type: 'line',
     data: {
-      labels: labels,
+      labels: labelsFormated,
       datasets: [{
-        data: data,
-        backgroundColor: chartColors,
-        borderWidth: 0,
-        hoverOffset: 4
+        label: 'Balance Trend',
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+        data: balanceTrend,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointBackgroundColor: '#4f46e5'
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          position: 'right',
-          labels: { boxWidth: 12 }
-        }
-      },
-      cutout: '70%'
-    }
-  };
-
-  // Mini chart updates
-  if (miniCategoryChartInstance) miniCategoryChartInstance.destroy();
-  if (labels.length > 0) {
-    miniCategoryChartInstance = new Chart(document.getElementById('mini-category-chart'), config);
-  }
-
-  // Main chart updates
-  const mainCanvas = document.getElementById('main-category-chart');
-  if (mainCanvas) {
-    if (mainCategoryChartInstance) mainCategoryChartInstance.destroy();
-    
-    // Slight tweak for main chart layout
-    const mainConfig = JSON.parse(JSON.stringify(config));
-    mainConfig.options.plugins.legend.position = 'bottom';
-    
-    if (labels.length > 0) {
-      mainCategoryChartInstance = new Chart(mainCanvas, mainConfig);
-    }
-  }
-}
-
-function renderIncomeExpenseChart() {
-  const canvas = document.getElementById('income-expense-chart');
-  if (!canvas) return;
-
-  const monthlyData = store.getMonthlyData();
-  
-  // Format labels nicely
-  const labelsFormated = monthlyData.labels.map(l => {
-    const [yr, mo] = l.split('-');
-    const date = new Date(yr, parseInt(mo)-1);
-    return date.toLocaleDateString('default', { month: 'short', year: 'numeric' });
-  });
-
-  if (incomeExpenseChartInstance) {
-    incomeExpenseChartInstance.destroy();
-  }
-
-  incomeExpenseChartInstance = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels: labelsFormated,
-      datasets: [
-        {
-          label: 'Income',
-          backgroundColor: '#10b981', // success
-          data: monthlyData.income,
-          borderRadius: 4
-        },
-        {
-          label: 'Expenses',
-          backgroundColor: '#ef4444', // danger
-          data: monthlyData.expenses,
-          borderRadius: 4
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { position: 'top' },
+        legend: { display: false },
       },
       scales: {
         y: {
-          beginAtZero: true,
-          grid: { color: 'rgba(255,255,255,0.05)' }
+          beginAtZero: false,
+          grid: { color: 'rgba(255,255,255,0.03)' },
+          ticks: { font: { size: 10 } }
         },
         x: {
-          grid: { display: false }
+          grid: { display: false },
+          ticks: { font: { size: 10 } }
         }
       }
     }

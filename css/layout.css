@@ -115,7 +115,7 @@
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 32px;
+  padding: 40px 48px;
   scroll-behavior: smooth;
 }
 
@@ -123,19 +123,20 @@
 .top-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 40px;
+  align-items: center;
+  margin-bottom: 48px;
 }
 
 .page-title {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 32px;
+  font-weight: 800;
   margin-bottom: 4px;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
 }
 
 .page-subtitle {
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .header-actions {
